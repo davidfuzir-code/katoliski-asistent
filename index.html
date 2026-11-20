@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<title>Rezultati NPZ</title>
+</head>
+
+<body>
+
+<h2>Vpisi svojo kodo za ogled rezultatov</h2>
+
+<input type="text" id="koda">
+<button onclick="preveri()">Poglej rezultat</button>
+
+<script>
+
+function preveri() {
+
+let koda = document.getElementById("koda").value;
+
+if(koda === "040 753") {
+
+window.open("rezultat.html");
+
+}
+
+else {
+
+alert("Napačna koda");
+
+}
+
+}
+
+</script>
+
+</body>
+</html>
