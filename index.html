@@ -1,38 +1,546 @@
+
 <!DOCTYPE html>
-<html>
-
+<html lang="sl">
 <head>
-<title>Rezultati NPZ</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KatoliškiAsistent 3.0</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial;background:#f2f5fa;color:#26364a}
+:root{--blue:#174a83;--dark:#12345a;--gold:#d9ad45}
+header{height:68px;background:white;display:flex;align-items:center;justify-content:space-between;padding:0 22px}
+.logo{font-size:21px;font-weight:bold;color:var(--blue)}
+.logo span{color:var(--gold)}
+.layout{display:flex;min-height:calc(100vh - 68px)}
+aside{width:225px;background:var(--dark);padding:18px 12px;flex-shrink:0}
+.nav{width:100%;text-align:left;padding:13px;background:none;border:0;color:#dce8f5;border-radius:8px;margin:3px 0;cursor:pointer}
+.nav.active,.nav:hover{background:#285582}
+main{padding:28px;width:100%;max-width:1400px;margin:auto}
+h1{margin:0 0 8px}
+.subtitle{color:#8190a3;margin-bottom:24px}
+.card,.panel{background:white;padding:20px;border-radius:12px;box-shadow:0 2px 8px #152d4810}
+.panel{margin-top:20px}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:15px}
+.card small{color:#8190a3}
+.big{font-size:28px;font-weight:bold;color:var(--blue);margin-top:10px}
+button.primary{background:var(--blue);color:white;border:0;padding:11px 17px;border-radius:7px;cursor:pointer}
+button.danger{background:#b63c3c;color:white;border:0;padding:7px 10px;border-radius:6px;cursor:pointer}
+button{cursor:pointer}
+input,select,textarea{padding:11px;border:1px solid #dce2eb;border-radius:7px;width:100%;margin:7px 0 13px;font:inherit}
+label{font-size:13px;color:#64748b}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+table{width:100%;border-collapse:collapse}
+td,th{text-align:left;padding:12px;border-bottom:1px solid #eee}
+th{font-size:12px;color:#8190a3}
+.grade{background:#e6f5eb;color:#268348;padding:5px 10px;border-radius:7px;font-weight:bold}
+.task{padding:13px;border-bottom:1px solid #eee}
+.tag{background:#fff3d8;color:#926b16;padding:5px 9px;border-radius:7px}
+.hidden{display:none!important}
+.login{min-height:100vh;background:linear-gradient(140deg,#102e50,#28629b);display:flex;align-items:center;justify-content:center;padding:20px}
+.loginbox{background:white;width:100%;max-width:410px;padding:35px;border-radius:16px}
+.loginbox .logo{text-align:center;font-size:25px;margin-bottom:25px}
+.loginbox button{width:100%}
+.error{color:#bd3030;font-size:13px}
+.daybuttons{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0}
+.daybtn{padding:9px 12px;border:1px solid #ddd;background:white;border-radius:7px}
+.daybtn.active{background:var(--blue);color:white}
+.role{background:#e9f0fa;color:var(--blue);padding:8px 12px;border-radius:20px;font-size:12px}
+footer{text-align:center;color:#9aa5b3;padding:25px;font-size:12px}
+@media(max-width:750px){
+.layout{display:block}
+aside{width:100%;display:flex;overflow-x:auto;padding:7px}
+.nav{width:auto;white-space:nowrap}
+main{padding:15px}
+.cards{grid-template-columns:1fr 1fr}
+.form-grid{grid-template-columns:1fr}
+}
+</style>
 </head>
-
 <body>
 
-<h2>Vpisi svojo kodo za ogled rezultatov</h2>
+<div id="loginPage" class="login">
+<div class="loginbox">
+<div class="logo">✝ Katoliški<span>Asistent</span></div>
+<h2 style="text-align:center">Prijava</h2>
+<p style="text-align:center;color:#8190a3">Prijavi se v svoj račun.</p>
+<label>Uporabniško ime</label>
+<input id="username" placeholder="Uporabniško ime">
+<label>Geslo</label>
+<input id="password" type="password" placeholder="Geslo">
+<p id="error" class="error"></p>
+<button class="primary" onclick="login()">Prijavi se</button>
+</div>
+</div>
 
-<input type="text" id="koda">
-<button onclick="preveri()">Poglej rezultat</button>
+<div id="app" class="hidden">
+<header>
+<div class="logo">✝ Katoliški<span>Asistent</span></div>
+<div>
+<span id="headerName"></span>
+<span id="roleLabel" class="role"></span>
+<button onclick="logout()">Odjava</button>
+</div>
+</header>
+
+<div class="layout">
+<aside>
+<button class="nav active" onclick="showPage('home',this)">⌂ Domov</button>
+<button class="nav" onclick="showPage('grades',this)">▤ Ocene</button>
+<button class="nav" onclick="showPage('subjects',this)">📚 Predmeti</button>
+<button class="nav" onclick="showPage('schedule',this)">▦ Urnik</button>
+<button class="nav" onclick="showPage('tasks',this)">✓ Domače naloge</button>
+<button class="nav" onclick="showPage('news',this)">🔔 Obvestila</button>
+<button class="nav" onclick="showPage('profile',this)">⚙ Profil</button>
+</aside>
+
+<main>
+
+<section id="home">
+<h1 id="welcome"></h1>
+<div class="subtitle">1. letnik Rimskokatoliške fakultete</div>
+<div class="cards">
+<div class="card"><small>Predmeti</small><div class="big" id="subjectCount"></div></div>
+<div class="card"><small>Število ocen</small><div class="big" id="gradeCount"></div></div>
+<div class="card"><small>Povprečje</small><div class="big" id="average"></div></div>
+<div class="card"><small>Nedokončane naloge</small><div class="big" id="taskCount"></div></div>
+</div>
+<div class="panel">
+<h2>📊 Zadnje ocene</h2>
+<div id="recentGrades"></div>
+</div>
+<div class="panel">
+<h2>✝ Misel dneva</h2>
+<p>»Gospod je moj pastir, nič mi ne manjka.«</p>
+<small>Psalm 23,1</small>
+</div>
+</section>
+
+<section id="grades" class="hidden">
+<h1>Ocene</h1>
+<div class="subtitle">Pregled ocen od 1 do 10.</div>
+<div class="panel teacherOnly">
+<h2>Dodaj oceno</h2>
+<div class="form-grid">
+<div><label>Predmet</label><select id="gradeSubject"></select></div>
+<div><label>Ocena</label>
+<select id="gradeValue">
+<option>1</option><option>2</option><option>3</option>
+<option>4</option><option>5</option><option>6</option>
+<option>7</option><option>8</option><option>9</option><option>10</option>
+</select></div>
+<div><label>Datum</label><input type="date" id="gradeDate"></div>
+<div><label>Vrsta</label>
+<select id="gradeType"><option>Pisno</option><option>Ustno</option><option>Seminar</option><option>Drugo</option></select></div>
+</div>
+<button class="primary" onclick="addGrade()">+ Dodaj oceno</button>
+</div>
+<div class="panel">
+<h2>Vse ocene</h2>
+<div id="gradeList"></div>
+</div>
+</section>
+
+<section id="subjects" class="hidden">
+<h1>Predmeti</h1>
+<div class="subtitle">Predmeti prvega letnika.</div>
+<div class="panel">
+<div id="subjectList"></div>
+</div>
+<div class="panel teacherOnly">
+<h2>Urejanje predmetov</h2>
+<input id="newSubject" placeholder="Novo ime predmeta">
+<button class="primary" onclick="addSubject()">+ Dodaj predmet</button>
+</div>
+</section>
+
+<section id="schedule" class="hidden">
+<h1>Urnik</h1>
+<div class="subtitle">Tedenski urnik predavanj.</div>
+<div class="panel teacherOnly">
+<h2>Dodaj uro</h2>
+<div class="form-grid">
+<div><label>Dan</label>
+<select id="day">
+<option>Ponedeljek</option><option>Torek</option>
+<option>Sreda</option><option>Četrtek</option>
+<option>Petek</option><option>Sobota</option><option>Nedelja</option>
+</select></div>
+<div><label>Čas</label><input id="hour" type="time"></div>
+<div><label>Predmet</label><select id="scheduleSubject"></select></div>
+<div><label>Učilnica</label><input id="room" placeholder="npr. 12"></div>
+</div>
+<button class="primary" onclick="addLesson()">+ Dodaj uro</button>
+</div>
+<div class="panel">
+<h2>Izberi dan</h2>
+<div class="daybuttons" id="dayButtons"></div>
+<h2 id="selectedDayTitle"></h2>
+<div id="scheduleList"></div>
+</div>
+</section>
+
+<section id="tasks" class="hidden">
+<h1>Domače naloge</h1>
+<div class="subtitle">Naloge ostanejo prikazane do konca roka.</div>
+<div class="panel teacherOnly">
+<h2>Dodaj nalogo</h2>
+<input id="taskName" placeholder="Opis naloge">
+<select id="taskSubject"></select>
+<label>Rok</label>
+<input type="date" id="taskDate">
+<button class="primary" onclick="addTask()">+ Dodaj nalogo</button>
+</div>
+<div class="panel">
+<h2>Seznam nalog</h2>
+<div id="taskList"></div>
+</div>
+</section>
+
+<section id="news" class="hidden">
+<h1>Obvestila</h1>
+<div class="subtitle">Šolska obvestila.</div>
+<div class="panel teacherOnly">
+<h2>Objavi obvestilo</h2>
+<input id="newsTitle" placeholder="Naslov">
+<textarea id="newsText" placeholder="Vsebina"></textarea>
+<button class="primary" onclick="addNews()">+ Objavi</button>
+</div>
+<div id="newsList"></div>
+</section>
+
+<section id="profile" class="hidden">
+<h1>Profil</h1>
+<div class="panel">
+<p><b>Ime:</b> <span id="profileName"></span></p>
+<p><b>Vloga:</b> <span id="profileRole"></span></p>
+<p><b>Ustanova:</b> Rimskokatoliška fakulteta</p>
+<p><b>Letnik:</b> 1.</p>
+</div>
+</section>
+
+<footer>KatoliškiAsistent 3.0 © 2026 | ✝ Vera • Znanje • Uspeh</footer>
+</main>
+</div>
+</div>
 
 <script>
+const accounts={
+ "David Fužir":{
+  password:"KatoliškiAsistentDavid",
+  role:"professor"
+ },
+ "Marija Potočnik":{
+  password:"12345678",
+  role:"student"
+ }
+};
 
-function preveri() {
+const defaultSubjects=[
+"✝️ Kristologija",
+"📜 Rimsko-katoliška dogmatika",
+"📖 Biblična teologija",
+"🧠 Filozofija",
+"🛡️ Argumenti in apologetika",
+"🌹 Mariologija",
+"⛪ Cerkvena zgodovina"
+];
 
-let koda = document.getElementById("koda").value;
+let currentUser=null;
+let subjects=load("subjects",defaultSubjects);
+let grades=load("grades",[]);
+let tasks=load("tasks",[]);
+let lessons=load("lessons",[]);
+let news=load("news",[]);
+let selectedDay=todayName();
 
-if(koda === "040 753") {
-
-window.open("rezultat.html");
-
+function load(key,fallback){
+ try{
+  const v=localStorage.getItem("ka_"+key);
+  return v===null?fallback:JSON.parse(v);
+ }catch(e){return fallback}
 }
 
-else {
-
-alert("Napačna koda");
-
+function save(){
+ localStorage.setItem("ka_subjects",JSON.stringify(subjects));
+ localStorage.setItem("ka_grades",JSON.stringify(grades));
+ localStorage.setItem("ka_tasks",JSON.stringify(tasks));
+ localStorage.setItem("ka_lessons",JSON.stringify(lessons));
+ localStorage.setItem("ka_news",JSON.stringify(news));
 }
 
+function isTeacher(){
+ return currentUser && currentUser.role==="professor";
 }
 
+function requireTeacher(){
+ if(!isTeacher()){
+  alert("Za to dejanje nimaš dovoljenja. Samo profesor lahko ureja podatke.");
+  return false;
+ }
+ return true;
+}
+
+function login(){
+ const username=document.getElementById("username").value.trim();
+ const password=document.getElementById("password").value;
+ const account=accounts[username];
+
+ if(!account||account.password!==password){
+  document.getElementById("error").textContent="Napačno uporabniško ime ali geslo.";
+  return;
+ }
+
+ currentUser={name:username,role:account.role};
+ sessionStorage.setItem("ka_user",username);
+ openApp();
+}
+
+function openApp(){
+ document.getElementById("loginPage").classList.add("hidden");
+ document.getElementById("app").classList.remove("hidden");
+
+ document.getElementById("headerName").textContent=currentUser.name;
+ document.getElementById("roleLabel").textContent=
+ isTeacher()?"PROFESOR":"UČENEC";
+
+ document.getElementById("welcome").textContent=
+ "Dobrodošel, "+currentUser.name+"!";
+
+ document.getElementById("profileName").textContent=currentUser.name;
+ document.getElementById("profileRole").textContent=
+ isTeacher()?"Profesor":"Učenka";
+
+ document.querySelectorAll(".teacherOnly").forEach(el=>{
+  el.classList.toggle("hidden",!isTeacher());
+ });
+
+ render();
+}
+
+function logout(){
+ sessionStorage.removeItem("ka_user");
+ currentUser=null;
+ location.reload();
+}
+
+function showPage(id,btn){
+ document.querySelectorAll("main section").forEach(s=>s.classList.add("hidden"));
+ document.getElementById(id).classList.remove("hidden");
+ document.querySelectorAll(".nav").forEach(n=>n.classList.remove("active"));
+ btn.classList.add("active");
+ render();
+}
+
+function escapeHTML(s){
+ return String(s).replace(/[&<>"']/g,c=>({
+ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+ }[c]));
+}
+
+function updateSelects(){
+ ["gradeSubject","scheduleSubject","taskSubject"].forEach(id=>{
+ const el=document.getElementById(id);
+ const old=el.value;
+ el.innerHTML=subjects.map(s=>`<option>${escapeHTML(s)}</option>`).join("");
+ if(subjects.includes(old))el.value=old;
+ });
+}
+
+function addGrade(){
+ if(!requireTeacher())return;
+ const subject=document.getElementById("gradeSubject").value;
+ const value=Number(document.getElementById("gradeValue").value);
+ const date=document.getElementById("gradeDate").value;
+ const type=document.getElementById("gradeType").value;
+ grades.push({subject,value,date,type});
+ save();render();
+}
+
+function deleteGrade(i){
+ if(!requireTeacher())return;
+ if(confirm("Izbrišem oceno?")){
+  grades.splice(i,1);save();render();
+ }
+}
+
+function addSubject(){
+ if(!requireTeacher())return;
+ const s=document.getElementById("newSubject").value.trim();
+ if(!s)return;
+ if(subjects.includes(s)){alert("Predmet že obstaja.");return;}
+ subjects.push(s);
+ document.getElementById("newSubject").value="";
+ save();render();
+}
+
+function deleteSubject(i){
+ if(!requireTeacher())return;
+ if(confirm("Izbrišem predmet?")){
+  subjects.splice(i,1);save();render();
+ }
+}
+
+function addLesson(){
+ if(!requireTeacher())return;
+ const hour=document.getElementById("hour").value;
+ if(!hour){alert("Vnesi čas.");return;}
+ lessons.push({
+ day:document.getElementById("day").value,
+ hour,
+ subject:document.getElementById("scheduleSubject").value,
+ room:document.getElementById("room").value
+ });
+ selectedDay=document.getElementById("day").value;
+ save();render();
+}
+
+function deleteLesson(i){
+ if(!requireTeacher())return;
+ lessons.splice(i,1);save();render();
+}
+
+function todayName(){
+ return ["Nedelja","Ponedeljek","Torek","Sreda","Četrtek","Petek","Sobota"][new Date().getDay()];
+}
+
+function selectDay(day){
+ selectedDay=day;
+ renderSchedule();
+}
+
+function renderSchedule(){
+ const days=["Ponedeljek","Torek","Sreda","Četrtek","Petek","Sobota","Nedelja"];
+
+ document.getElementById("dayButtons").innerHTML=days.map(d=>
+ `<button class="daybtn ${selectedDay===d?"active":""}" onclick="selectDay('${d}')">${d}</button>`
+ ).join("");
+
+ document.getElementById("selectedDayTitle").textContent=selectedDay;
+
+ const found=lessons.map((l,i)=>({...l,index:i}))
+ .filter(l=>l.day===selectedDay)
+ .sort((a,b)=>a.hour.localeCompare(b.hour));
+
+ document.getElementById("scheduleList").innerHTML=found.length?
+ found.map(l=>`<div class="task">
+ <b>${escapeHTML(l.hour)}</b> — ${escapeHTML(l.subject)}
+ <br><small>Učilnica: ${escapeHTML(l.room||"–")}</small>
+ ${isTeacher()?`<br><button class="danger" onclick="deleteLesson(${l.index})">Izbriši</button>`:""}
+ </div>`).join(""):"Za ta dan ni predavanj.";
+}
+
+function todayISO(){
+ const d=new Date();
+ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+
+function cleanTasks(){
+ const before=tasks.length;
+ tasks=tasks.filter(t=>!t.date||t.date>=todayISO());
+ if(tasks.length!==before)save();
+}
+
+function addTask(){
+ if(!requireTeacher())return;
+ const name=document.getElementById("taskName").value.trim();
+ const date=document.getElementById("taskDate").value;
+ if(!name||!date){alert("Izpolni opis in rok.");return;}
+ if(date<todayISO()){alert("Rok ne more biti v preteklosti.");return;}
+ tasks.push({
+ name,
+ subject:document.getElementById("taskSubject").value,
+ date
+ });
+ document.getElementById("taskName").value="";
+ save();render();
+}
+
+function deleteTask(i){
+ if(!requireTeacher())return;
+ tasks.splice(i,1);save();render();
+}
+
+function addNews(){
+ if(!requireTeacher())return;
+ const title=document.getElementById("newsTitle").value.trim();
+ const content=document.getElementById("newsText").value.trim();
+ if(!title||!content)return;
+ news.unshift({
+ title,content,
+ date:new Date().toLocaleDateString("sl-SI")
+ });
+ document.getElementById("newsTitle").value="";
+ document.getElementById("newsText").value="";
+ save();render();
+}
+
+function deleteNews(i){
+ if(!requireTeacher())return;
+ news.splice(i,1);save();render();
+}
+
+function render(){
+ cleanTasks();
+ updateSelects();
+
+ document.getElementById("subjectCount").textContent=subjects.length;
+ document.getElementById("gradeCount").textContent=grades.length;
+ const avg=grades.length?
+ grades.reduce((a,g)=>a+g.value,0)/grades.length:0;
+ document.getElementById("average").textContent=
+ grades.length?avg.toFixed(2):"–";
+ document.getElementById("taskCount").textContent=
+ tasks.length;
+
+ document.getElementById("recentGrades").innerHTML=grades.length?
+ grades.slice(-4).reverse().map(g=>
+ `<p>${escapeHTML(g.subject)} — <span class="grade">${g.value}/10</span></p>`
+ ).join(""):"Zaenkrat še ni ocen.";
+
+ document.getElementById("gradeList").innerHTML=grades.length?
+ `<table><tr><th>Predmet</th><th>Ocena</th><th>Datum</th><th>Vrsta</th><th></th></tr>`+
+ grades.map((g,i)=>`<tr>
+ <td>${escapeHTML(g.subject)}</td>
+ <td><span class="grade">${g.value}/10</span></td>
+ <td>${escapeHTML(g.date||"–")}</td>
+ <td>${escapeHTML(g.type)}</td>
+ <td>${isTeacher()?`<button class="danger" onclick="deleteGrade(${i})">Izbriši</button>`:""}</td>
+ </tr>`).join("")+"</table>":"Še ni ocen.";
+
+ document.getElementById("subjectList").innerHTML=subjects.map((s,i)=>
+ `<div class="task">${escapeHTML(s)}
+ ${isTeacher()?`<button class="danger" onclick="deleteSubject(${i})">Izbriši</button>`:""}
+ </div>`).join("");
+
+ document.getElementById("taskList").innerHTML=tasks.length?
+ tasks.map((t,i)=>`<div class="task">
+ <b>${escapeHTML(t.name)}</b>
+ <br>${escapeHTML(t.subject)}
+ <br><small>Rok: ${escapeHTML(t.date||"–")}</small>
+ ${isTeacher()?`<br><button class="danger" onclick="deleteTask(${i})">Izbriši</button>`:""}
+ </div>`).join(""):"Ni domačih nalog.";
+
+ renderSchedule();
+
+ document.getElementById("newsList").innerHTML=news.map((n,i)=>
+ `<div class="panel">
+ <span class="tag">${escapeHTML(n.date)}</span>
+ <h2>${escapeHTML(n.title)}</h2>
+ <p>${escapeHTML(n.content)}</p>
+ ${isTeacher()?`<button class="danger" onclick="deleteNews(${i})">Izbriši</button>`:""}
+ </div>`
+ ).join("")||"Ni novih obvestil.";
+}
+
+document.getElementById("gradeDate").value=todayISO();
+document.getElementById("taskDate").min=todayISO();
+
+const savedUser=sessionStorage.getItem("ka_user");
+if(savedUser&&accounts[savedUser]){
+ currentUser={name:savedUser,role:accounts[savedUser].role};
+ openApp();
+}
 </script>
-
 </body>
 </html>
