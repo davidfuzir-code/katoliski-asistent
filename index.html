@@ -675,17 +675,14 @@ function addLesson() {
 }
 
 function deleteLesson(i) {
+  function deleteLesson(i) {
   if (!requireTeacher()) return;
 
   lessons.splice(i, 1);
-  attendance = attendance.filter(a => a.lessonIndex !== i);
-  attendance = attendance.map(a => ({
-    ...a,
-    lessonIndex: a.lessonIndex > i ? a.lessonIndex - 1 : a.lessonIndex
-  }));
 
   save();
   render();
+}
 }
 
 function selectDay(day) {
