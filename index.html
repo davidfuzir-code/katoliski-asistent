@@ -738,7 +738,7 @@ function renderSchedule() {
     .filter(l => l.day === selectedDay)
     .sort((a, b) => a.hour.localeCompare(b.hour));
 
-  const date = document.getElementById("attendanceDate").value || todayISO();
+const date = document.getElementById("attendanceDate")?.value || todayISO();
 
   document.getElementById("scheduleList").innerHTML = `
     <div class="teacherOnly ${isTeacher() ? "" : "hidden"}">
