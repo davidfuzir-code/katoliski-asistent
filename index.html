@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>KatoliškiAsistent 3.0</title>
+<title>KatoliškiAsistent 4.0</title>
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:Arial;background:#f2f5fa;color:#26364a}
@@ -47,6 +47,12 @@ th{font-size:12px;color:#8190a3}
 .daybtn.active{background:var(--blue);color:white}
 .role{background:#e9f0fa;color:var(--blue);padding:8px 12px;border-radius:20px;font-size:12px}
 footer{text-align:center;color:#9aa5b3;padding:25px;font-size:12px}
+.status{display:inline-block;padding:5px 9px;border-radius:7px;font-size:12px;font-weight:bold}
+.status-done{background:#e6f5eb;color:#268348}
+.status-missing{background:#fde8e8;color:#b63c3c}
+.status-waiting{background:#fff3d8;color:#926b16}
+.present{background:#e6f5eb;color:#268348;padding:6px 9px;border-radius:6px;border:0}
+.absent{background:#fde8e8;color:#b63c3c;padding:6px 9px;border-radius:6px;border:0}
 @media(max-width:750px){
 .layout{display:block}
 aside{width:100%;display:flex;overflow-x:auto;padding:7px}
@@ -87,6 +93,7 @@ main{padding:15px}
 <aside>
 <button class="nav active" onclick="showPage('home',this)">⌂ Domov</button>
 <button class="nav" onclick="showPage('grades',this)">▤ Ocene</button>
+<button class="nav" onclick="showPage('exams',this)">📅 Prihodnji izpiti</button>
 <button class="nav" onclick="showPage('subjects',this)">📚 Predmeti</button>
 <button class="nav" onclick="showPage('schedule',this)">▦ Urnik</button>
 <button class="nav" onclick="showPage('tasks',this)">✓ Domače naloge</button>
@@ -132,12 +139,39 @@ main{padding:15px}
 <div><label>Datum</label><input type="date" id="gradeDate"></div>
 <div><label>Vrsta</label>
 <select id="gradeType"><option>Pisno</option><option>Ustno</option><option>Seminar</option><option>Drugo</option></select></div>
+<div><label>Dobljene točke</label><input type="number" id="gradePoints" min="0" placeholder="npr. 18"></div>
+<div><label>Največje možno število točk</label><input type="number" id="gradeMaxPoints" min="1" placeholder="npr. 25"></div>
 </div>
 <button class="primary" onclick="addGrade()">+ Dodaj oceno</button>
 </div>
 <div class="panel">
 <h2>Vse ocene</h2>
 <div id="gradeList"></div>
+</div>
+</section>
+
+<section id="exams" class="hidden">
+<h1>Prihodnji izpiti in preverjanja</h1>
+<div class="subtitle">Pregled prihodnjih preverjanj znanja.</div>
+<div class="panel teacherOnly">
+<h2>Dodaj prihodnje preverjanje</h2>
+<div class="form-grid">
+<div><label>Predmet</label><select id="examSubject"></select></div>
+<div><label>Vrsta preverjanja</label>
+<select id="examType">
+<option>Pisni izpit</option>
+<option>Ustno spraševanje</option>
+<option>Seminar</option>
+<option>Drugo</option>
+</select></div>
+<div><label>Datum</label><input type="date" id="examDate"></div>
+<div><label>Opis (neobvezno)</label><input id="examDescription" placeholder="Dodatne informacije"></div>
+</div>
+<button class="primary" onclick="addExam()">+ Dodaj preverjanje</button>
+</div>
+<div class="panel">
+<h2>Prihodnja preverjanja</h2>
+<div id="examList"></div>
 </div>
 </section>
 
@@ -175,6 +209,13 @@ main{padding:15px}
 <div class="daybuttons" id="dayButtons"></div>
 <h2 id="selectedDayTitle"></h2>
 <div id="scheduleList"></div>
+</div>
+<div class="panel">
+<h2>📊 Evidenca prisotnosti</h2>
+<div class="cards">
+<div class="card"><small>Prisotne ure</small><div class="big" id="presentCount">0</div></div>
+<div class="card"><small>Odsotne ure</small><div class="big" id="absentCount">0</div></div>
+</div>
 </div>
 </section>
 
@@ -217,7 +258,7 @@ main{padding:15px}
 </div>
 </section>
 
-<footer>KatoliškiAsistent 3.0 © 2026 | ✝ Vera • Znanje • Uspeh</footer>
+<footer>KatoliškiAsistent 4.0 © 2026 | ✝ Vera • Znanje • Uspeh</footer>
 </main>
 </div>
 </div>
@@ -271,6 +312,8 @@ let grades = [];
 let tasks = [];
 let lessons = [];
 let news = [];
+let exams = [];
+let attendance = [];
 let selectedDay = todayName();
 let unsubscribeData = null;
 let creatingInitialData = false;
@@ -373,7 +416,9 @@ async function save() {
       grades,
       tasks,
       lessons,
-      news
+      news,
+      exams,
+      attendance
     }, { merge: true });
 
   } catch (e) {
@@ -394,7 +439,9 @@ function listenToData() {
             grades: [],
             tasks: [],
             lessons: [],
-            news: []
+            news: [],
+            exams: [],
+            attendance: []
           });
         } catch (e) {
           console.error(e);
@@ -416,6 +463,8 @@ function listenToData() {
     tasks = data.tasks || [];
     lessons = data.lessons || [];
     news = data.news || [];
+    exams = data.exams || [];
+    attendance = data.attendance || [];
 
     render();
   }, (error) => {
@@ -476,7 +525,7 @@ function escapeHTML(s) {
 }
 
 function updateSelects() {
-  ["gradeSubject", "scheduleSubject", "taskSubject"].forEach(id => {
+  ["gradeSubject", "scheduleSubject", "taskSubject", "examSubject"].forEach(id => {
     const el = document.getElementById(id);
     const old = el.value;
 
@@ -491,12 +540,39 @@ function updateSelects() {
 function addGrade() {
   if (!requireTeacher()) return;
 
+  const pointsInput = document.getElementById("gradePoints").value;
+  const maxInput = document.getElementById("gradeMaxPoints").value;
+
+  if ((pointsInput === "") !== (maxInput === "")) {
+    alert("Vnesi tako dobljene kot največje možno število točk.");
+    return;
+  }
+
+  let points = null;
+  let maxPoints = null;
+
+  if (pointsInput !== "" && maxInput !== "") {
+    points = Number(pointsInput);
+    maxPoints = Number(maxInput);
+
+    if (!Number.isFinite(points) || !Number.isFinite(maxPoints) ||
+        points < 0 || maxPoints <= 0 || points > maxPoints) {
+      alert("Preveri število doseženih in največjih točk.");
+      return;
+    }
+  }
+
   grades.push({
     subject: document.getElementById("gradeSubject").value,
     value: Number(document.getElementById("gradeValue").value),
     date: document.getElementById("gradeDate").value,
-    type: document.getElementById("gradeType").value
+    type: document.getElementById("gradeType").value,
+    points,
+    maxPoints
   });
+
+  document.getElementById("gradePoints").value = "";
+  document.getElementById("gradeMaxPoints").value = "";
 
   save();
   render();
@@ -507,6 +583,40 @@ function deleteGrade(i) {
 
   if (confirm("Izbrišem oceno?")) {
     grades.splice(i, 1);
+    save();
+    render();
+  }
+}
+
+function addExam() {
+  if (!requireTeacher()) return;
+
+  const date = document.getElementById("examDate").value;
+
+  if (!date) {
+    alert("Vnesi datum preverjanja.");
+    return;
+  }
+
+  exams.push({
+    subject: document.getElementById("examSubject").value,
+    type: document.getElementById("examType").value,
+    date,
+    description: document.getElementById("examDescription").value.trim()
+  });
+
+  document.getElementById("examDescription").value = "";
+  document.getElementById("examDate").value = "";
+
+  save();
+  render();
+}
+
+function deleteExam(i) {
+  if (!requireTeacher()) return;
+
+  if (confirm("Izbrišem prihodnje preverjanje?")) {
+    exams.splice(i, 1);
     save();
     render();
   }
@@ -568,12 +678,46 @@ function deleteLesson(i) {
   if (!requireTeacher()) return;
 
   lessons.splice(i, 1);
+  attendance = attendance.filter(a => a.lessonIndex !== i);
+  attendance = attendance.map(a => ({
+    ...a,
+    lessonIndex: a.lessonIndex > i ? a.lessonIndex - 1 : a.lessonIndex
+  }));
+
   save();
   render();
 }
 
 function selectDay(day) {
   selectedDay = day;
+  renderSchedule();
+}
+
+function markAttendance(lessonIndex, status) {
+  if (!requireTeacher()) return;
+
+  const date = document.getElementById("attendanceDate").value;
+
+  if (!date) {
+    alert("Izberi datum.");
+    return;
+  }
+
+  const existing = attendance.find(a =>
+    a.lessonIndex === lessonIndex && a.date === date
+  );
+
+  if (existing) {
+    existing.status = status;
+  } else {
+    attendance.push({
+      lessonIndex,
+      date,
+      status
+    });
+  }
+
+  save();
   renderSchedule();
 }
 
@@ -594,15 +738,50 @@ function renderSchedule() {
     .filter(l => l.day === selectedDay)
     .sort((a, b) => a.hour.localeCompare(b.hour));
 
-  document.getElementById("scheduleList").innerHTML = found.length
-    ? found.map(l => `<div class="task">
-        <b>${escapeHTML(l.hour)}</b> — ${escapeHTML(l.subject)}
-        <br><small>Učilnica: ${escapeHTML(l.room || "–")}</small>
-        ${isTeacher()
-          ? `<br><button class="danger" onclick="deleteLesson(${l.index})">Izbriši</button>`
-          : ""}
-      </div>`).join("")
-    : "Za ta dan ni predavanj.";
+  const date = document.getElementById("attendanceDate").value || todayISO();
+
+  document.getElementById("scheduleList").innerHTML = `
+    <div class="teacherOnly ${isTeacher() ? "" : "hidden"}">
+      <label>Datum za evidenco prisotnosti</label>
+      <input type="date" id="attendanceDate" value="${date}"
+        onchange="renderSchedule()">
+    </div>
+  ` + (found.length
+    ? found.map(l => {
+        const record = attendance.find(a =>
+          a.lessonIndex === l.index && a.date === date
+        );
+
+        let statusText = "Ni označeno";
+        let statusClass = "status-waiting";
+
+        if (record && record.status === "present") {
+          statusText = "Prisoten";
+          statusClass = "status-done";
+        } else if (record && record.status === "absent") {
+          statusText = "Odsoten";
+          statusClass = "status-missing";
+        }
+
+        return `<div class="task">
+          <b>${escapeHTML(l.hour)}</b> — ${escapeHTML(l.subject)}
+          <br><small>Učilnica: ${escapeHTML(l.room || "–")}</small>
+          <br><span class="status ${statusClass}">${statusText}</span>
+          ${isTeacher()
+            ? `<br><br>
+              <button class="present" onclick="markAttendance(${l.index},'present')">Prisoten</button>
+              <button class="absent" onclick="markAttendance(${l.index},'absent')">Odsoten</button>
+              <br><br><button class="danger" onclick="deleteLesson(${l.index})">Izbriši uro</button>`
+            : ""}
+        </div>`;
+      }).join("")
+    : "Za ta dan ni predavanj.");
+
+  const presentTotal = attendance.filter(a => a.status === "present").length;
+  const absentTotal = attendance.filter(a => a.status === "absent").length;
+
+  document.getElementById("presentCount").textContent = presentTotal;
+  document.getElementById("absentCount").textContent = absentTotal;
 }
 
 function addTask() {
@@ -624,11 +803,20 @@ function addTask() {
   tasks.push({
     name,
     subject: document.getElementById("taskSubject").value,
-    date
+    date,
+    status: "pending"
   });
 
   document.getElementById("taskName").value = "";
 
+  save();
+  render();
+}
+
+function setTaskStatus(i, status) {
+  if (!requireTeacher()) return;
+
+  tasks[i].status = status;
   save();
   render();
 }
@@ -687,7 +875,8 @@ function render() {
   document.getElementById("average").textContent =
     grades.length ? avg.toFixed(2) : "–";
 
-  document.getElementById("taskCount").textContent = visibleTasks.length;
+  document.getElementById("taskCount").textContent =
+    visibleTasks.filter(t => t.status !== "completed").length;
 
   document.getElementById("recentGrades").innerHTML = grades.length
     ? grades.slice(-4).reverse().map(g =>
@@ -697,19 +886,45 @@ function render() {
 
   document.getElementById("gradeList").innerHTML = grades.length
     ? `<table>
-        <tr><th>Predmet</th><th>Ocena</th><th>Datum</th><th>Vrsta</th><th></th></tr>
-        ${grades.map((g, i) => `<tr>
-          <td>${escapeHTML(g.subject)}</td>
-          <td><span class="grade">${g.value}/10</span></td>
-          <td>${escapeHTML(g.date || "–")}</td>
-          <td>${escapeHTML(g.type)}</td>
-          <td>${isTeacher()
-            ? `<button class="danger" onclick="deleteGrade(${i})">Izbriši</button>`
-            : ""}
-          </td>
-        </tr>`).join("")}
+        <tr><th>Predmet</th><th>Ocena</th><th>Datum</th><th>Vrsta</th><th>Točke</th><th>Uspešnost</th><th></th></tr>
+        ${grades.map((g, i) => {
+          const hasPoints = g.points !== null && g.points !== undefined &&
+            g.maxPoints !== null && g.maxPoints !== undefined &&
+            Number(g.maxPoints) > 0;
+
+          const percentage = hasPoints
+            ? (Number(g.points) / Number(g.maxPoints) * 100).toFixed(1) + "%"
+            : "–";
+
+          return `<tr>
+            <td>${escapeHTML(g.subject)}</td>
+            <td><span class="grade">${g.value}/10</span></td>
+            <td>${escapeHTML(g.date || "–")}</td>
+            <td>${escapeHTML(g.type)}</td>
+            <td>${hasPoints ? `${g.points}/${g.maxPoints}` : "–"}</td>
+            <td>${percentage}</td>
+            <td>${isTeacher()
+              ? `<button class="danger" onclick="deleteGrade(${i})">Izbriši</button>`
+              : ""}
+            </td>
+          </tr>`;
+        }).join("")}
       </table>`
     : "Še ni ocen.";
+
+  document.getElementById("examList").innerHTML =
+    exams.map((e, i) => ({...e, index:i}))
+      .filter(e => e.date >= todayISO())
+      .sort((a,b) => a.date.localeCompare(b.date))
+      .map(e => `<div class="task">
+        <b>${escapeHTML(e.subject)}</b>
+        <br><span class="tag">${escapeHTML(e.type)}</span>
+        <br><small>Datum: ${escapeHTML(e.date)}</small>
+        ${e.description ? `<p>${escapeHTML(e.description)}</p>` : ""}
+        ${isTeacher()
+          ? `<button class="danger" onclick="deleteExam(${e.index})">Izbriši</button>`
+          : ""}
+      </div>`).join("") || "Trenutno ni prihodnjih preverjanj.";
 
   document.getElementById("subjectList").innerHTML =
     subjects.map((s, i) => `<div class="task">
@@ -722,12 +937,28 @@ function render() {
   document.getElementById("taskList").innerHTML = visibleTasks.length
     ? visibleTasks.map(t => {
         const i = tasks.indexOf(t);
+
+        const isCompleted = t.status === "completed";
+        const isOverdue = t.date && t.date < todayISO() && !isCompleted;
+
+        const statusText = isCompleted
+          ? "Opravljena"
+          : isOverdue ? "Neopravljena" : "Čaka na opravljanje";
+
+        const statusClass = isCompleted
+          ? "status-done"
+          : isOverdue ? "status-missing" : "status-waiting";
+
         return `<div class="task">
           <b>${escapeHTML(t.name)}</b>
           <br>${escapeHTML(t.subject)}
           <br><small>Rok: ${escapeHTML(t.date || "–")}</small>
+          <br><br><span class="status ${statusClass}">${statusText}</span>
           ${isTeacher()
-            ? `<br><button class="danger" onclick="deleteTask(${i})">Izbriši</button>`
+            ? `<br><br>
+              <button class="present" onclick="setTaskStatus(${i},'completed')">Označi opravljeno</button>
+              <button class="absent" onclick="setTaskStatus(${i},'pending')">Označi neopravljeno</button>
+              <br><br><button class="danger" onclick="deleteTask(${i})">Izbriši</button>`
             : ""}
         </div>`;
       }).join("")
@@ -754,12 +985,17 @@ window.logout = logout;
 window.showPage = showPage;
 window.addGrade = addGrade;
 window.deleteGrade = deleteGrade;
+window.addExam = addExam;
+window.deleteExam = deleteExam;
 window.addSubject = addSubject;
 window.deleteSubject = deleteSubject;
 window.addLesson = addLesson;
 window.deleteLesson = deleteLesson;
 window.selectDay = selectDay;
+window.markAttendance = markAttendance;
+window.renderSchedule = renderSchedule;
 window.addTask = addTask;
+window.setTaskStatus = setTaskStatus;
 window.deleteTask = deleteTask;
 window.addNews = addNews;
 window.deleteNews = deleteNews;
